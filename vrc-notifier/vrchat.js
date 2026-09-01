@@ -54,6 +54,31 @@ class VRChatClient extends EventEmitter {
     return all.map((f) => ({ id: f.id, displayName: f.displayName }));
   }
 
+  // Friends who are online right now (VRChat's offline=false filter already
+  // limits the result to that). Keeps platform/location so callers can decide
+  // whether "active on website only" should count as online.
+  async getOnlineFriends() {
+    const all = [];
+    let offset = 0;
+    const n = 100;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const res = await this.client.get("/auth/user/friends", {
+        params: { offline: false, n, offset },
+      });
+      const batch = res.data || [];
+      all.push(...batch);
+      if (batch.length < n) break;
+      offset += n;
+    }
+    return all.map((f) => ({
+      id: f.id,
+      displayName: f.displayName,
+      platform: f.last_platform || f.platform || "",
+      location: f.location,
+    }));
+  }
+
   async _getAuthCookieValue() {
     const cookies = await this.jar.getCookies("https://api.vrchat.cloud");
     console.log("[vrchat][debug] cookies visible for api.vrchat.cloud:", JSON.stringify(cookies.map((c) => ({ key: c.key, domain: c.domain, path: c.path }))));

@@ -25,6 +25,10 @@ if (!DISCORD_TOKEN || !DISCORD_CLIENT_ID || !OWNER_DISCORD_ID || !VRCHAT_USERNAM
 
 let data = store.load();
 let friendsCache = []; // full VRChat friends list: [{id, displayName}]
+let vrc = null; // active VRChatClient instance, set once startVRChat() finishes
+
+// How often to silently refresh the full friends list in the background.
+const FRIEND_REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
 // ---------- Slash command definitions ----------
 const commands = [
@@ -47,6 +51,9 @@ const commands = [
       opt.setName("name").setDescription("Exact VRChat display name of the friend").setRequired(true)
     ),
   new SlashCommandBuilder().setName("vrc-watch-list").setDescription("Show the friends currently being watched."),
+  new SlashCommandBuilder()
+    .setName("vrc-dm-online")
+    .setDescription("DM you now, once per friend, for every VRChat friend who is online right now."),
   new SlashCommandBuilder()
     .setName("vrc-set-message")
     .setDescription("Set the notification message. Use {friend} where the name should go.")
@@ -134,6 +141,37 @@ discord.on("interactionCreate", async (interaction) => {
       });
     }
 
+    if (interaction.commandName === "vrc-dm-online") {
+      if (!vrc) {
+        return interaction.reply({ content: "VRChat isn't connected yet, try again in a moment.", ephemeral: true });
+      }
+      await interaction.deferReply({ ephemeral: true });
+
+      let online;
+      try {
+        online = await vrc.getOnlineFriends();
+      } catch (err) {
+        console.error("[vrchat] getOnlineFriends failed:", err.message);
+        return interaction.editReply({ content: "Couldn't fetch your online friends from VRChat, try again shortly." });
+      }
+
+      if (online.length === 0) {
+        return interaction.editReply({ content: "No friends are online right now." });
+      }
+
+      // Small delay between DMs so we don't hammer Discord's rate limit for
+      // a large friends list all at once.
+      let sent = 0;
+      for (const friend of online) {
+        const message = data.messageTemplate.replaceAll("{friend}", friend.displayName);
+        await notifyOwner(message);
+        sent += 1;
+        await new Promise((r) => setTimeout(r, 400));
+      }
+
+      return interaction.editReply({ content: `Sent ${sent} DM(s) for friends who are currently online.` });
+    }
+
     if (interaction.commandName === "vrc-set-message") {
       const template = interaction.options.getString("template");
       if (!template.includes("{friend}")) {
@@ -164,11 +202,22 @@ async function notifyOwner(text) {
 
 // ---------- VRChat wiring ----------
 async function startVRChat() {
-  const vrc = new VRChatClient({ username: VRCHAT_USERNAME, password: VRCHAT_PASSWORD });
+  vrc = new VRChatClient({ username: VRCHAT_USERNAME, password: VRCHAT_PASSWORD });
   await vrc.init();
 
   friendsCache = await vrc.getFriendsList();
   console.log(`[vrchat] Loaded ${friendsCache.length} friends.`);
+
+  // Keep the cached friends list (used by /vrc-friends and /vrc-watch-add)
+  // fresh in the background, since it's otherwise only fetched once at boot.
+  setInterval(async () => {
+    try {
+      friendsCache = await vrc.getFriendsList();
+      console.log(`[vrchat] Refreshed friends list (${friendsCache.length} friends).`);
+    } catch (err) {
+      console.error("[vrchat] Background friends list refresh failed:", err.message);
+    }
+  }, FRIEND_REFRESH_INTERVAL_MS);
 
   vrc.on("friend-online", (info) => {
     if (!info.isRealClient) {
