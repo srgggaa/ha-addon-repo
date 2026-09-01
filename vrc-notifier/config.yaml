@@ -1,0 +1,26 @@
+name: "VRChat Friend Notifier"
+version: "1.0.0"
+slug: "vrc_notifier"
+description: "DMs you on Discord when a chosen VRChat friend comes online in the client"
+url: "https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+init: false
+startup: services
+boot: auto
+map:
+  - addon_config:rw
+options:
+  discord_token: ""
+  discord_client_id: ""
+  owner_discord_id: ""
+  vrchat_username: ""
+  vrchat_password: ""
+schema:
+  discord_token: password
+  discord_client_id: str
+  owner_discord_id: str
+  vrchat_username: str
+  vrchat_password: password
