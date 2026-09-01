@@ -1,9 +1,3 @@
-# VRC Notifier — Home Assistant Add-on Repository
-
-## Before pushing to GitHub
-Edit `repository.yaml` and `vrc-notifier/config.yaml` — replace
-`YOUR_GITHUB_USERNAME/YOUR_REPO_NAME` with your actual repo path.
-
 ## Adding this repo to Home Assistant
 1. Push this whole folder (as-is, with `repository.yaml` at the root) to a
    GitHub repo.
@@ -25,9 +19,10 @@ Edit `repository.yaml` and `vrc-notifier/config.yaml` — replace
 `session.js` uses Node's `readline` to prompt for a 2FA code interactively,
 which won't work inside a headless add-on container (no stdin attached).
 **Do the very first login on your PC** (as you've already been doing) so a
-`session.json` gets generated locally, then copy that file into
-`/addon_config/vrc-notifier/session.json` on the HA host **before** first
-starting the add-on (via the Samba/SSH add-on). That lets it skip straight to
+`session.json` gets generated locally, then copy that file directly into
+the add-on's config share — `\\<your-ha-ip>\addon_configs\<addon-slug>\session.json`
+(the same folder you can browse over Samba/SSH; no subfolder needed) —
+**before** first starting the add-on. That lets it skip straight to
 "Reusing saved session" and avoid needing 2FA input inside the container.
 If the session ever fully expires, repeat this: log in once on your PC,
 copy the fresh `session.json` over.
