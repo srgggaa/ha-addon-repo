@@ -1,5 +1,5 @@
 name: "VRChat Friend Notifier"
-version: "1.0.2"
+version: "1.0.3"
 slug: "vrc_notifier"
 description: "DMs you on Discord when a chosen VRChat friend comes online in the client"
 url: "https://github.com/srgggaa/ha-addon-repo"
