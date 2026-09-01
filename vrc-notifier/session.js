@@ -72,25 +72,14 @@ async function login({ username, password }) {
   // ---------------------------------------------------------------------------------------------
 
   const basicAuth = Buffer.from(`${encodeURIComponent(username)}:${encodeURIComponent(password)}`).toString("base64");
-
-  // NOTE: passing Authorization as a per-request header can get silently dropped
-  // by axios-cookiejar-support's wrapper() on some axios 1.7.x + acs 5.x combos.
-  // Setting it as an instance default header survives that merge reliably.
   client.defaults.headers.common["Authorization"] = `Basic ${basicAuth}`;
-
-  // --- DEBUG: confirm the header is actually attached before sending ---
-  client.interceptors.request.use((config) => {
-    console.log("[vrchat][debug] outgoing headers:", JSON.stringify(config.headers));
-    return config;
-  });
-  // -----------------------------------------------------------------------
-
   let res;
   try {
     res = await client.get("/auth/user");
     // --- DEBUG: show what VRChat actually returned on success ---
     console.log("[vrchat][debug] /auth/user response status:", res.status);
     console.log("[vrchat][debug] /auth/user response data:", JSON.stringify(res.data));
+    console.log("[vrchat][debug] /auth/user raw set-cookie header:", JSON.stringify(res.headers["set-cookie"]));
     // --------------------------------------------------------------
   } catch (err) {
     // --- DEBUG: dump everything we can about the failure ---
@@ -118,18 +107,16 @@ async function login({ username, password }) {
     );
     const endpoint = isEmail ? "/auth/twofactorauth/emailotp/verify" : "/auth/twofactorauth/totp/verify";
     const verifyRes = await client.post(endpoint, { code });
+    console.log("[vrchat][debug] 2FA verify raw set-cookie header:", JSON.stringify(verifyRes.headers["set-cookie"]));
     if (!verifyRes.data || !verifyRes.data.verified) {
       throw new Error("VRChat 2FA verification failed.");
     }
   }
 
-  // Login is now cookie-based; drop the Basic auth default header so it
-  // doesn't get sent (and potentially conflict) on subsequent requests.
-  delete client.defaults.headers.common["Authorization"];
-
   me = await verify(client);
   if (!me) throw new Error("VRChat login did not result in a valid session.");
 
+  console.log("[vrchat][debug] full jar after login:", JSON.stringify(jar.toJSON()));
   saveJar(jar);
   console.log(`[vrchat] Logged in fresh as ${me.displayName}`);
   return { client, jar, user: me };

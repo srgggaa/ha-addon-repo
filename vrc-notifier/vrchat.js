@@ -55,7 +55,15 @@ class VRChatClient extends EventEmitter {
   }
 
   async _getAuthCookieValue() {
-    const cookies = await this.jar.getCookies("https://api.vrchat.com");
+    const cookies = await this.jar.getCookies("https://api.vrchat.cloud");
+    console.log("[vrchat][debug] cookies visible for api.vrchat.cloud:", JSON.stringify(cookies.map((c) => ({ key: c.key, domain: c.domain, path: c.path }))));
+    // Fallback: dump every cookie in the jar regardless of domain, in case
+    // VRChat is scoping the cookie somewhere unexpected.
+    const allCookies = await this.jar.getCookies("https://api.vrchat.cloud", { allPaths: true });
+    if (allCookies.length === 0) {
+      const serialized = this.jar.toJSON();
+      console.log("[vrchat][debug] full jar contents:", JSON.stringify(serialized));
+    }
     const authCookie = cookies.find((c) => c.key === "auth");
     if (!authCookie) throw new Error("No auth cookie found after login.");
     return authCookie.value;
