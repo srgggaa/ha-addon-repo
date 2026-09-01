@@ -6,7 +6,6 @@ url: "https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME"
 arch:
   - aarch64
   - amd64
-  - armv7
 init: false
 startup: services
 boot: auto

@@ -1,8 +1,7 @@
-ARG BUILD_FROM
-FROM $BUILD_FROM
+FROM node:20-alpine
 
-# Install Node.js 18+ and jq (jq is used by run.sh to read HA's options.json)
-RUN apk add --no-cache nodejs npm jq
+# jq is used by run.sh to read HA's options.json
+RUN apk add --no-cache jq
 
 WORKDIR /app
 
