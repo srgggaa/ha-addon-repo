@@ -153,17 +153,21 @@ class VRChatClient extends EventEmitter {
 
     switch (msg.type) {
       // Fired when a friend actually becomes active INSIDE the VRChat client
-      // (desktop, PCVR, or standalone headset app). This is what we want.
+      // (desktop, PCVR, or standalone headset app) - website/companion-app
+      // presence sends "friend-active" instead (handled below), so by the
+      // time we get here it's already a real client. NOTE: the platform
+      // string lives in "last_platform" (e.g. "standalonewindows", "android",
+      // or a raw Unity build version) - the sibling "platform" field on the
+      // User object is a separate, effectively-always-empty legacy field and
+      // must not be used to gate this event.
       case "friend-online": {
         if (!content || !content.user) return;
         const user = content.user;
-        const platform = user.platform || "";
-        const isRealClient = this.allowedPlatforms.includes(platform);
+        const platform = user.last_platform || user.platform || "";
         this.emit("friend-online", {
           id: content.userId || user.id,
           displayName: user.displayName,
           platform,
-          isRealClient,
           worldId: user.worldId,
         });
         break;

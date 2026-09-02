@@ -220,11 +220,6 @@ async function startVRChat() {
   }, FRIEND_REFRESH_INTERVAL_MS);
 
   vrc.on("friend-online", (info) => {
-    if (!info.isRealClient) {
-      // Ignore website-only / unrecognized platforms.
-      console.log(`[vrchat] ${info.displayName} is online but not in the VRChat client (platform="${info.platform}") - ignoring.`);
-      return;
-    }
     const watched = data.watchedFriends[info.id];
     if (!watched) return; // not someone we're tracking
 
